@@ -223,6 +223,11 @@ class DatasetProcessor:
         """Квантильное кодирование с преобразованием в целочисленный формат."""
         return series.rank(pct=True).astype(int)
 
+    def classification_encoder(self) -> pd.DataFrame:
+        catboost_encoder = ce.CatBoostEncoder()
+        df_encoded_class = catboost_encoder.fit_transform(self.df, self.df['score'])
+        return df_encoded_class
+
     def encode_columns(self, method: int) -> pd.DataFrame:
         """
         Кодирование колонок в зависимости от выбранного метода.
@@ -242,7 +247,7 @@ class DatasetProcessor:
             catboost_encoder = ce.CatBoostEncoder()
             for col in few_unique_cols:
                 df_encoded[col] = self.quantile_encode(self.df[col])
-            df_encoded = catboost_encoder.fit_transform(df_encoded, self.df['value'])
+            df_encoded = catboost_encoder.fit_transform(df_encoded, self.df['score'])
         elif method in [4, 5]:
             for col in few_unique_cols:
                 try:
