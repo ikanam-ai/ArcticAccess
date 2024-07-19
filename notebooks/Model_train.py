@@ -1,45 +1,45 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
-import category_encoders as ce
+import torch.nn as nn
+import torch 
 from typing import Tuple, List
 from catboost import Pool
+import Preprocessor
 
-class ModelPipeline:
-    def __init__(self, geojson_files: List[str], config: dict):
-        self.processor = DatasetProcessor(geojson_files, config)
-        self.model = CustomRegressor(
-            iterations=2500,
-            max_depth=6,
-            learning_rate=0.05,
-            random_seed=42,
-            loss_function='RMSE',
-            eval_metric='RMSE',
-            verbose=100
-        )
+class ModelfClassification(nn.Module):
+    """Модель для классификации"""
+    def __init__(self, input_size, num_layers=4, output_size=2, dropout_prob=0.2):
+        super(ModelfClassification, self).__init__()
+        self.num_layers = num_layers
+        self.conv1d = nn.Conv1d(input_size, 64, kernel_size=3, padding=1)
+        self.maxpool1d = nn.MaxPool1d(kernel_size=2)
+        self.fc1 = nn.Linear(input_size, 128)
+        self.batchnorm = nn.BatchNorm1d(128)
+        self.fc2 = nn.Linear(128, output_size)
+        self.dropout = nn.Dropout(dropout_prob)
+        self.sigm = nn.Sigmoid()
+        
+        
+    def forward(self, x):
+        out = self.fc1(out)
+        out = self.batchnorm(out)
+        out = torch.relu(out)
+        out = self.dropout(out)
+        out = self.fc2(out)
+        out = self.sigm(out)
+        return out
+    
+class ModelfRegression():
+    """Модель для оценки привлекательности"""
+    def __init__(self, embeddings_array, target_array):
+        self.catboost_model = CatBoostRegressor(iterations=2000, depth=7, learning_rate=0.05, task_type="GPU",  devices='0:1',  loss_function='RMSE', eval_metric='RMSE', random_state=42)
+        self.catboost_model.fit(embeddings_array, target_array)
 
-    def train(self, df: pd.DataFrame):
-        """Обучение модели."""
-        groups, processed_df = self.processor.process()
-        y = processed_df[self.processor.config['target']]
-        X = processed_df.drop(columns=[self.processor.config['target']])
+    def predict(self, X):
+        return catboost_model.predict(X_test)
+    
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        train_pool = Pool(X_train, y_train)
-        test_pool = Pool(X_test, y_test)
-
-        self.model.fit(train_pool, eval_set=test_pool, use_best_model=True, plot=True)
-
-        self.save_model('model_weights.cbm')
-
-        return self.model, X_test, y_test
-
-    def save_model(self, model_path: str):
-        """Сохранение весов модели."""
-        self.model.save_model(model_path)
-
-# Пример конфигурации
 config = {
     'min_xval': 64.5,
     'max_xval': 65.5,
@@ -60,7 +60,4 @@ file_list = [
     'path_to_hexagons.geojson',
 ]
 
-pipeline = ModelPipeline(file_list, config)
-
-model, X_test, y_test = pipeline.train(pipeline.processor.df)
 
